@@ -1,0 +1,19 @@
+{
+  "name": "@clevertree/md2jsx",
+  "version": "0.1.0",
+  "description": "High-performance Markdown to JSX AST transpiler",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "pkg"
+  ],
+  "scripts": {
+    "build": "wasm-pack build --release --target web --features wasm",
+    "test": "cargo test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "wasm-pack": "^0.12.1"
+  }
+}

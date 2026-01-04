@@ -1,0 +1,13 @@
+/target
+/pkg
+/pkg-node
+/pkg-web
+/pkg-bundler
+.DS_Store
+Cargo.lock
+node_modules
+.env
+*.wasm
+/android/build
+/android/.gradle
+/android/local.properties
