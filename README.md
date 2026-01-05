@@ -3,6 +3,30 @@
 
 High-performance Markdown to JSX AST transpiler for Web (WASM) and Android (JNI).
 
+## Architecture
+
+```mermaid
+graph TD
+    subgraph "Input"
+        MD[Markdown Source]
+    end
+
+    subgraph "Parser Core (Rust)"
+        CM[pulldown-cmark]
+        HTML[HTML Tag Filter]
+        AST[AST Generator]
+    end
+
+    subgraph "Output"
+        JSON[JSON AST]
+    end
+
+    MD --> CM
+    CM --> HTML
+    HTML --> AST
+    AST --> JSON
+```
+
 This library parses Markdown (including GitHub Flavored Markdown) and converts it into a JSON-serializable Abstract Syntax Tree (AST) that can be easily rendered by React, Act, or other JSX-like runtimes.
 
 ## Features

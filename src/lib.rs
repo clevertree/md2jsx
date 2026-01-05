@@ -63,6 +63,8 @@ pub fn parse(markdown: &str, options: &TranspileOptions) -> Vec<Node> {
     p_options.insert(Options::ENABLE_TABLES);
     p_options.insert(Options::ENABLE_STRIKETHROUGH);
     p_options.insert(Options::ENABLE_TASKLISTS);
+    p_options.insert(Options::ENABLE_FOOTNOTES);
+    p_options.insert(Options::ENABLE_SMART_PUNCTUATION);
     
     let parser = Parser::new_ext(markdown, p_options);
     let mut stack: Vec<Node> = Vec::new();
@@ -136,6 +138,16 @@ pub fn parse(markdown: &str, options: &TranspileOptions) -> Vec<Node> {
                         props: HashMap::new(),
                         children: Vec::new(),
                     },
+                    Tag::FootnoteDefinition(label) => {
+                        let mut props = HashMap::new();
+                        props.insert("id".to_string(), serde_json::Value::String(format!("fn-{}", label)));
+                        props.insert("className".to_string(), serde_json::Value::String("footnote-definition".to_string()));
+                        Node::Element {
+                            tag: "div".to_string(),
+                            props,
+                            children: Vec::new(),
+                        }
+                    },
                     _ => Node::Element {
                         tag: "div".to_string(),
                         props: HashMap::new(),
@@ -172,6 +184,28 @@ pub fn parse(markdown: &str, options: &TranspileOptions) -> Vec<Node> {
                     tag: "code".to_string(),
                     props: HashMap::new(),
                     children: vec![Node::Text { content: code.to_string() }],
+                };
+                if stack.is_empty() {
+                    root.push(node);
+                } else {
+                    let parent = stack.last_mut().unwrap();
+                    if let Node::Element { children, .. } = parent {
+                        children.push(node);
+                    }
+                }
+            }
+            Event::FootnoteReference(label) => {
+                let mut props = HashMap::new();
+                props.insert("href".to_string(), serde_json::Value::String(format!("#fn-{}", label)));
+                props.insert("className".to_string(), serde_json::Value::String("footnote-ref".to_string()));
+                let node = Node::Element {
+                    tag: "sup".to_string(),
+                    props: HashMap::new(),
+                    children: vec![Node::Element {
+                        tag: "a".to_string(),
+                        props,
+                        children: vec![Node::Text { content: label.to_string() }],
+                    }],
                 };
                 if stack.is_empty() {
                     root.push(node);
@@ -316,6 +350,32 @@ mod tests {
             }
         }
         None
+    }
+
+    #[test]
+    fn test_gfm_footnotes() {
+        let markdown = "Here is a footnote[^1]\n\n[^1]: This is the footnote content.";
+        let options = TranspileOptions { allowed_tags: vec![] };
+        let ast = parse(markdown, &options);
+        println!("AST: {}", serde_json::to_string_pretty(&ast).unwrap());
+        
+        // Footnotes are rendered as <sup><a href=\"#fn-1\" className=\"footnote-ref\">1</a></sup>
+        // and a <div class=\"footnote-definition\" id=\"fn-1\">...</div>
+        
+        let sup = find_node(&ast, "sup").expect("Should find sup for footnote ref");
+        if let Node::Element { children, .. } = sup {
+            let a = children.first().expect("Should have link child");
+            if let Node::Element { tag, props, .. } = a {
+                assert_eq!(tag, "a");
+                let href = props.get("href").unwrap().as_str().unwrap();
+                assert!(href.contains("#fn-1"));
+            }
+        }
+
+        let div = find_node(&ast, "div").expect("Should find footnote definition");
+        if let Node::Element { props, .. } = div {
+            assert_eq!(props.get("className").unwrap().as_str().unwrap(), "footnote-definition");
+        }
     }
 
     #[test]
